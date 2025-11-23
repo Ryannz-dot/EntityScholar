@@ -14,7 +14,9 @@
 
 ## 🎯 Overview
 
-EntityScholar is a professional Chrome extension that uses Google Cloud Natural Language API to extract and analyze key entities (people, places, organizations, events) from web pages. It provides both manual and automatic scanning modes with seamless integration into your browsing experience.
+EntityScholar is a professional Chrome extension that uses TextRazor API to extract and analyze key entities (people, places, organizations, events) from web pages. It provides both manual and automatic scanning modes with seamless integration into your browsing experience.
+
+**🔒 Security**: API keys are encrypted using AES-256-GCM encryption before storage, ensuring your credentials are never stored in plain text.
 
 ## ✨ Features
 
@@ -58,12 +60,12 @@ EntityScholar is a professional Chrome extension that uses Google Cloud Natural 
 ## 🚀 Installation
 
 ### Prerequisites
-1. **Google Cloud API Key** (required)
-   - Go to [Google Cloud Console](https://console.cloud.google.com/)
-   - Create a new project or select existing one
-   - Enable the "Cloud Natural Language API"
-   - Create credentials (API Key)
-   - Copy your API key
+1. **TextRazor API Key** (required)
+   - Go to [TextRazor Signup](https://www.textrazor.com/signup)
+   - Create a free account
+   - Get your API key from the dashboard
+   - Free tier includes 500 requests per day
+   - Copy your API key (it will be encrypted automatically)
 
 ### Install Extension
 
@@ -103,9 +105,9 @@ EntityScholar is a professional Chrome extension that uses Google Cloud Natural 
 4. Configure API Key:
    - Click the EntityScholar icon in toolbar
    - Click "Configure API Key" or the settings icon
-   - Paste your Google Cloud API key
-   - Click "Test API Connection" to verify
-   - Click "Save Settings"
+   - Paste your TextRazor API key
+   - Click "Test API Connection" to verify (should show test entities found)
+   - Click "Save Settings" (your key will be encrypted with AES-256 automatically)
 
 #### Option 2: From Chrome Web Store
 *Coming soon*
@@ -157,8 +159,8 @@ Press `Alt+Shift+S` on any page to trigger a scan without opening the popup.
 ### Settings Configuration
 
 #### API Configuration
-- **API Key**: Your Google Cloud Natural Language API key (required)
-- **Test Connection**: Verify your API key works
+- **API Key**: Your TextRazor API key (required, encrypted with AES-256)
+- **Test Connection**: Verify your API key works (tests with sample text)
 
 #### Auto-Scan Settings
 - **Enable Auto-Scan**: Toggle automatic scanning
@@ -220,8 +222,8 @@ EntityScholar/
 2. **Popup sends message** to service worker
 3. **Service worker injects** content script
 4. **Content script extracts** page text
-5. **Service worker calls** Google NLP API
-6. **API returns** entity analysis
+5. **Service worker calls** TextRazor API (with decrypted key)
+6. **API returns** entity analysis (with relevance/confidence scores)
 7. **Service worker stores** results and updates UI
 8. **Popup displays** entities
 
@@ -230,7 +232,8 @@ EntityScholar/
 #### Service Worker (`service-worker.js`)
 - Handles all message passing
 - Manages tab listeners for auto-scan
-- Makes API calls to Google Cloud
+- Makes API calls to TextRazor with encrypted key
+- Decrypts API key using Web Crypto API (AES-256-GCM)
 - Manages storage and caching
 - Updates badge and notifications
 
@@ -255,17 +258,20 @@ EntityScholar/
 ## 🔐 Privacy & Security
 
 - **No data collection**: EntityScholar does not collect or store any user data
-- **API calls only**: Text is sent only to Google Cloud NLP API
+- **Encrypted API keys**: All API keys encrypted with AES-256-GCM before storage
+- **API calls only**: Text is sent only to TextRazor API for analysis
 - **Local storage**: All settings and cache stored locally in Chrome
 - **No tracking**: No analytics or tracking of any kind
 - **Open source**: Full source code available for audit
+- **Secure key derivation**: Uses PBKDF2 with 100,000 iterations for key generation
 
 ## 🛠️ Development
 
 ### Prerequisites
 - Chrome browser (version 88+)
-- Google Cloud account with Natural Language API enabled
+- TextRazor account with API key (free tier available)
 - Basic knowledge of JavaScript, HTML, CSS
+- Understanding of Web Crypto API for encryption (optional)
 
 ### Setup for Development
 ```bash
@@ -294,23 +300,25 @@ python3 scripts/generate-icons.py
    - Protected pages (chrome://, file://)
 
 ### API Rate Limits
-- Google Cloud Natural Language API has rate limits
-- Free tier: 5,000 requests/month
-- Monitor usage in Google Cloud Console
-- Extension caches results to minimize API calls
+- TextRazor API has rate limits
+- Free tier: 500 requests/day
+- Monitor usage in TextRazor dashboard
+- Extension caches results to minimize API calls (default 5 min cache)
 
 ## 🐛 Troubleshooting
 
 ### "API Key Required" Error
-- Ensure you've entered a valid Google Cloud API key
-- Verify Natural Language API is enabled in your project
-- Test API connection in settings
+- Ensure you've entered a valid TextRazor API key
+- Verify you've saved the settings after entering the key
+- Test API connection in settings (should show test entities found)
+- Check that your key hasn't been revoked in TextRazor dashboard
 
 ### "Scan Failed" Error
 - Check internet connection
-- Verify API key is correct
-- Check API quota in Google Cloud Console
+- Verify API key is correct and not expired
+- Check API quota in TextRazor dashboard (free: 500/day)
 - Try refreshing the page
+- Check browser console for detailed error messages
 
 ### No Entities Found
 - Page may have minimal text content
@@ -345,7 +353,8 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 
 ## 🙏 Acknowledgments
 
-- Google Cloud Natural Language API for entity extraction
+- TextRazor API for powerful entity extraction and NLP services
+- Web Crypto API for secure client-side encryption
 - Chrome Extension documentation and community
 - Icons generated using HTML5 Canvas
 

@@ -4,13 +4,14 @@ Get EntityScholar up and running in 5 minutes!
 
 ## Step 1: Get Your API Key (2 minutes)
 
-1. Go to [Google Cloud Console](https://console.cloud.google.com/)
-2. Create a new project (or select existing)
-3. In the search bar, type "Natural Language API"
-4. Click "Enable API"
-5. Go to "Credentials" in the left menu
-6. Click "+ CREATE CREDENTIALS" → "API Key"
-7. Copy your new API key 🔑
+1. Go to [TextRazor Signup](https://www.textrazor.com/signup)
+2. Create a free account
+3. Verify your email
+4. Log in to your dashboard
+5. Copy your API key 🔑
+6. Free tier: 500 requests/day (perfect for testing!)
+
+**🔒 Security Note**: Your API key will be encrypted with AES-256 before storage!
 
 ## Step 2: Install Extension (1 minute)
 
@@ -41,9 +42,9 @@ python3 scripts/generate-icons.py
 
 1. Click EntityScholar icon in toolbar
 2. Click "Configure API Key" button
-3. Paste your API key from Step 1
-4. Click "Test API Connection" (should see ✓)
-5. Click "Save Settings"
+3. Paste your TextRazor API key from Step 1
+4. Click "Test API Connection" (should see "✓ API connection successful! Found X test entities.")
+5. Click "Save Settings" (key is encrypted automatically with AES-256!)
 
 ## Step 5: Start Using! (30 seconds)
 
@@ -103,12 +104,12 @@ python3 scripts/generate-icons.py
 - Cache prevents rescanning same page within 5 minutes
 - Exclude sites you don't need analyzed
 - Use manual mode if you only occasionally need entity extraction
-- Monitor usage in [Google Cloud Console](https://console.cloud.google.com/)
+- Monitor usage in [TextRazor Dashboard](https://www.textrazor.com/)
 
 ## Troubleshooting
 
 ### ❌ "API Key Required" Error
-→ Go to settings and add your Google Cloud API key
+→ Go to settings and add your TextRazor API key (it will be encrypted)
 
 ### ❌ "Scan Failed" Error
 → Check internet connection
