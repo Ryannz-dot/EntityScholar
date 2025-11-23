@@ -1,6 +1,12 @@
 /**
  * EntityScholar Settings Page Script
+ * Uses encrypted storage for API keys via crypto-utils.js
  */
+
+// Import crypto utilities
+const cryptoUtilsScript = document.createElement('script');
+cryptoUtilsScript.src = '../scripts/crypto-utils.js';
+document.head.appendChild(cryptoUtilsScript);
 
 // DOM Elements
 const apiKeyInput = document.getElementById('apiKey');
@@ -28,7 +34,7 @@ async function loadSettings() {
   try {
     // Load from sync storage
     const syncSettings = await chrome.storage.sync.get([
-      'apiKey',
+      'apiKeySet',
       'autoScanEnabled',
       'cacheDuration',
       'scanDelay',
@@ -37,9 +43,10 @@ async function loadSettings() {
       'excludedSites'
     ]);
 
-    // Populate form fields
-    if (syncSettings.apiKey) {
-      apiKeyInput.value = syncSettings.apiKey;
+    // Show placeholder if API key is set (don't show actual encrypted key)
+    if (syncSettings.apiKeySet) {
+      apiKeyInput.placeholder = '••••••••••••••••••••••••••••';
+      apiKeyInput.value = '';
     }
 
     autoScanEnabled.checked = syncSettings.autoScanEnabled || false;
@@ -71,7 +78,17 @@ async function saveSettings() {
 
     const apiKey = apiKeyInput.value.trim();
 
-    if (!apiKey) {
+    // Only save API key if it's been changed (not empty and not placeholder)
+    if (apiKey && apiKey !== '••••••••••••••••••••••••••••') {
+      // Encrypt and store API key
+      await securelyStoreApiKey(apiKey);
+      apiKeyInput.value = '';
+      apiKeyInput.placeholder = '••••••••••••••••••••••••••••';
+    }
+
+    // Check if API key is set
+    const isKeySet = await isApiKeySet();
+    if (!isKeySet) {
       showToast('API key is required', 'error');
       saveBtn.disabled = false;
       saveBtn.textContent = 'Save Settings';
@@ -84,9 +101,8 @@ async function saveSettings() {
       .map(site => site.trim())
       .filter(site => site.length > 0);
 
-    // Save to sync storage
+    // Save other settings to sync storage
     await chrome.storage.sync.set({
-      apiKey: apiKey,
       autoScanEnabled: autoScanEnabled.checked,
       cacheDuration: parseInt(cacheDuration.value, 10),
       scanDelay: parseInt(scanDelay.value, 10),
@@ -95,7 +111,7 @@ async function saveSettings() {
       excludedSites: excludedSitesList
     });
 
-    showToast('Settings saved successfully', 'success');
+    showToast('Settings saved successfully (API key encrypted)', 'success');
     saveStatus.textContent = 'Saved';
     saveStatus.className = 'save-status success';
 
@@ -119,44 +135,58 @@ async function saveSettings() {
  * Test API connection
  */
 async function testApiConnection() {
-  const apiKey = apiKeyInput.value.trim();
-
-  if (!apiKey) {
-    apiTestResult.textContent = 'Please enter an API key first';
-    apiTestResult.className = 'api-test-result error';
-    return;
-  }
-
   try {
     testApiBtn.disabled = true;
     testApiBtn.textContent = 'Testing...';
     apiTestResult.textContent = 'Testing connection...';
     apiTestResult.className = 'api-test-result';
 
-    // Test with a simple request
-    const response = await fetch(
-      `https://language.googleapis.com/v1/documents:analyzeEntities?key=${apiKey}`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          document: {
-            type: 'PLAIN_TEXT',
-            content: 'Google Cloud Natural Language API test'
-          },
-          encodingType: 'UTF8'
-        })
+    // Get API key - either from input or from encrypted storage
+    let apiKey = apiKeyInput.value.trim();
+
+    if (!apiKey || apiKey === '••••••••••••••••••••••••••••') {
+      // Try to get from encrypted storage
+      apiKey = await getDecryptedApiKey();
+      if (!apiKey) {
+        apiTestResult.textContent = 'Please enter an API key first';
+        apiTestResult.className = 'api-test-result error';
+        return;
       }
-    );
+    }
+
+    // Test with TextRazor API
+    const formData = new URLSearchParams();
+    formData.append('text', 'TextRazor API connection test. This is a sample text to verify the API is working correctly.');
+    formData.append('extractors', 'entities');
+
+    const response = await fetch('https://api.textrazor.com/', {
+      method: 'POST',
+      headers: {
+        'X-TextRazor-Key': apiKey,
+        'Content-Type': 'application/x-www-form-urlencoded'
+      },
+      body: formData.toString()
+    });
 
     if (response.ok) {
-      apiTestResult.textContent = '✓ API connection successful';
-      apiTestResult.className = 'api-test-result success';
+      const data = await response.json();
+      if (data.ok) {
+        const entityCount = data.response?.entities?.length || 0;
+        apiTestResult.textContent = `✓ API connection successful! Found ${entityCount} test entities.`;
+        apiTestResult.className = 'api-test-result success';
+      } else {
+        apiTestResult.textContent = `✗ API test failed: ${data.error || 'Unknown error'}`;
+        apiTestResult.className = 'api-test-result error';
+      }
     } else {
-      const error = await response.json();
-      apiTestResult.textContent = `✗ API test failed: ${error.error?.message || 'Unknown error'}`;
+      let errorMessage = 'Unknown error';
+      try {
+        const errorData = await response.json();
+        errorMessage = errorData.error || errorMessage;
+      } catch (e) {
+        errorMessage = `HTTP ${response.status}: ${response.statusText}`;
+      }
+      apiTestResult.textContent = `✗ API test failed: ${errorMessage}`;
       apiTestResult.className = 'api-test-result error';
     }
 

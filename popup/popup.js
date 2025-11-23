@@ -40,9 +40,9 @@ async function init() {
     }
 
     // Check if API key is configured
-    const settings = await chrome.storage.sync.get(['apiKey', 'autoScanEnabled']);
+    const settings = await chrome.storage.sync.get(['apiKeySet', 'autoScanEnabled']);
 
-    if (!settings.apiKey) {
+    if (!settings.apiKeySet) {
       showSetupPrompt();
       return;
     }
