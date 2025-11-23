@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>EntityScholar Settings</title>
+  <link rel="stylesheet" href="settings.css">
+</head>
+<body>
+  <div class="container">
+    <!-- Header -->
+    <header class="header">
+      <div class="header-content">
+        <img src="../icons/icon48.png" alt="EntityScholar" class="logo">
+        <div>
+          <h1>EntityScholar Settings</h1>
+          <p class="subtitle">Configure your entity extraction preferences</p>
+        </div>
+      </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="main">
+      <!-- API Configuration -->
+      <section class="section">
+        <h2 class="section-title">
+          <span class="section-icon">🔑</span>
+          API Configuration
+        </h2>
+        <div class="section-content">
+          <div class="form-group">
+            <label for="apiKey" class="label">
+              Google Cloud Natural Language API Key
+              <span class="required">*</span>
+            </label>
+            <input
+              type="password"
+              id="apiKey"
+              class="input"
+              placeholder="Enter your API key"
+              autocomplete="off"
+            >
+            <p class="help-text">
+              Get your API key from the
+              <a href="https://console.cloud.google.com/apis/credentials" target="_blank" rel="noopener">
+                Google Cloud Console
+              </a>
+            </p>
+          </div>
+
+          <div class="form-group">
+            <button id="testApiBtn" class="btn btn-secondary">
+              Test API Connection
+            </button>
+            <span id="apiTestResult" class="api-test-result"></span>
+          </div>
+        </div>
+      </section>
+
+      <!-- Auto-Scan Settings -->
+      <section class="section">
+        <h2 class="section-title">
+          <span class="section-icon">⚡</span>
+          Auto-Scan Settings
+        </h2>
+        <div class="section-content">
+          <div class="form-group">
+            <div class="toggle-group">
+              <label class="toggle-label">
+                <input type="checkbox" id="autoScanEnabled" class="toggle-input">
+                <span class="toggle-switch"></span>
+                <span class="toggle-text">
+                  <strong>Enable automatic scanning on page load</strong>
+                  <span class="toggle-description">
+                    Automatically analyze entities when you navigate to a new page or switch tabs
+                  </span>
+                </span>
+              </label>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="cacheDuration" class="label">
+              Cache Duration (minutes)
+            </label>
+            <div class="input-group">
+              <input
+                type="number"
+                id="cacheDuration"
+                class="input input-small"
+                min="1"
+                max="60"
+                value="5"
+              >
+              <span class="input-suffix">minutes</span>
+            </div>
+            <p class="help-text">
+              Don't rescan the same URL within this time period
+            </p>
+          </div>
+
+          <div class="form-group">
+            <label for="scanDelay" class="label">
+              Scan Delay (milliseconds)
+            </label>
+            <div class="input-group">
+              <input
+                type="number"
+                id="scanDelay"
+                class="input input-small"
+                min="0"
+                max="5000"
+                step="100"
+                value="500"
+              >
+              <span class="input-suffix">ms</span>
+            </div>
+            <p class="help-text">
+              Wait this long after page load to avoid incomplete content
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <!-- Notifications -->
+      <section class="section">
+        <h2 class="section-title">
+          <span class="section-icon">🔔</span>
+          Notifications
+        </h2>
+        <div class="section-content">
+          <div class="form-group">
+            <div class="toggle-group">
+              <label class="toggle-label">
+                <input type="checkbox" id="showNotifications" class="toggle-input">
+                <span class="toggle-switch"></span>
+                <span class="toggle-text">
+                  <strong>Show desktop notifications when entities found</strong>
+                  <span class="toggle-description">
+                    Display a notification with the entity count when auto-scan completes
+                  </span>
+                </span>
+              </label>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <div class="toggle-group">
+              <label class="toggle-label">
+                <input type="checkbox" id="showBadge" class="toggle-input">
+                <span class="toggle-switch"></span>
+                <span class="toggle-text">
+                  <strong>Display entity count badge on extension icon</strong>
+                  <span class="toggle-description">
+                    Show the number of entities found as a badge on the toolbar icon
+                  </span>
+                </span>
+              </label>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Excluded Sites -->
+      <section class="section">
+        <h2 class="section-title">
+          <span class="section-icon">🚫</span>
+          Excluded Sites
+        </h2>
+        <div class="section-content">
+          <div class="form-group">
+            <label for="excludedSites" class="label">
+              Sites to skip (one per line)
+            </label>
+            <textarea
+              id="excludedSites"
+              class="textarea"
+              rows="5"
+              placeholder="gmail.com&#10;youtube.com&#10;twitter.com"
+            ></textarea>
+            <p class="help-text">
+              Auto-scan will skip these domains. Enter partial matches (e.g., "gmail.com" will skip all Gmail pages)
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <!-- Usage Statistics -->
+      <section class="section">
+        <h2 class="section-title">
+          <span class="section-icon">📊</span>
+          Usage Statistics
+        </h2>
+        <div class="section-content">
+          <div class="stats-grid">
+            <div class="stat-card">
+              <div class="stat-value" id="totalScans">0</div>
+              <div class="stat-label">Total Scans</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-value" id="totalEntities">0</div>
+              <div class="stat-label">Entities Found</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-value" id="avgEntities">0</div>
+              <div class="stat-label">Avg per Page</div>
+            </div>
+          </div>
+          <button id="clearHistoryBtn" class="btn btn-secondary btn-small">
+            Clear Scan History
+          </button>
+        </div>
+      </section>
+
+      <!-- About -->
+      <section class="section">
+        <h2 class="section-title">
+          <span class="section-icon">ℹ️</span>
+          About
+        </h2>
+        <div class="section-content">
+          <p class="about-text">
+            <strong>EntityScholar v1.0.0</strong><br>
+            Extract key entities from web pages and search academic sources for scholarly context.
+          </p>
+          <p class="about-text">
+            Uses Google Cloud Natural Language API to identify people, places, organizations, and other entities with confidence scores.
+          </p>
+          <div class="about-links">
+            <a href="https://github.com/yourusername/entityscholar" target="_blank" class="link">
+              View on GitHub
+            </a>
+            <a href="https://github.com/yourusername/entityscholar/issues" target="_blank" class="link">
+              Report Issue
+            </a>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer">
+      <button id="saveBtn" class="btn btn-primary">
+        Save Settings
+      </button>
+      <div id="saveStatus" class="save-status"></div>
+    </footer>
+
+    <!-- Success Toast -->
+    <div id="toast" class="toast">
+      <span id="toastMessage"></span>
+    </div>
+  </div>
+
+  <script src="settings.js"></script>
+</body>
+</html>

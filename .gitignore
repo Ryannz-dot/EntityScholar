@@ -1,0 +1,51 @@
+# Chrome Extension
+*.pem
+*.crx
+*.zip
+
+# API Keys and Secrets
+.env
+config.json
+secrets.json
+
+# User Data
+user_data/
+storage/
+
+# OS Files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Editor Files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.project
+
+# Logs
+*.log
+logs/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+env/
+
+# Node (if added later)
+node_modules/
+package-lock.json
+yarn.lock
+
+# Build files
+dist/
+build/
+
+# Temporary files
+tmp/
+temp/
+*.tmp
