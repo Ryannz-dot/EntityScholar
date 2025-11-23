@@ -284,12 +284,25 @@ async function analyzeEntities(text) {
 
     if (!response.ok) {
       let errorMessage = 'API request failed';
-      try {
-        const errorData = await response.json();
-        errorMessage = errorData.error || errorMessage;
-      } catch (e) {
-        errorMessage = `HTTP ${response.status}: ${response.statusText}`;
+
+      // Provide specific error messages based on HTTP status codes
+      if (response.status === 401) {
+        errorMessage = 'Invalid TextRazor API key or quota exceeded. Please check your settings.';
+      } else if (response.status === 400) {
+        errorMessage = 'Invalid request format sent to TextRazor API.';
+      } else if (response.status === 413) {
+        errorMessage = 'Page content too large (exceeds 200kb TextRazor limit).';
+      } else if (response.status === 500) {
+        errorMessage = 'TextRazor server error. Please try again later.';
+      } else {
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.error || `HTTP ${response.status}: ${response.statusText}`;
+        } catch (e) {
+          errorMessage = `HTTP ${response.status}: ${response.statusText}`;
+        }
       }
+
       throw new Error(errorMessage);
     }
 

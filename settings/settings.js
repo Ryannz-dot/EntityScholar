@@ -163,7 +163,8 @@ async function testApiConnection() {
       method: 'POST',
       headers: {
         'X-TextRazor-Key': apiKey,
-        'Content-Type': 'application/x-www-form-urlencoded'
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'Accept-Encoding': 'gzip'
       },
       body: formData.toString()
     });
@@ -180,12 +181,25 @@ async function testApiConnection() {
       }
     } else {
       let errorMessage = 'Unknown error';
-      try {
-        const errorData = await response.json();
-        errorMessage = errorData.error || errorMessage;
-      } catch (e) {
-        errorMessage = `HTTP ${response.status}: ${response.statusText}`;
+
+      // Provide specific error messages based on HTTP status codes
+      if (response.status === 401) {
+        errorMessage = 'Invalid API key or quota exceeded. Please check your TextRazor API key.';
+      } else if (response.status === 400) {
+        errorMessage = 'Invalid request format. Please contact support.';
+      } else if (response.status === 413) {
+        errorMessage = 'Request too large. Text exceeds 200kb limit.';
+      } else if (response.status === 500) {
+        errorMessage = 'TextRazor server error. Please try again later.';
+      } else {
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.error || `HTTP ${response.status}: ${response.statusText}`;
+        } catch (e) {
+          errorMessage = `HTTP ${response.status}: ${response.statusText}`;
+        }
       }
+
       apiTestResult.textContent = `✗ API test failed: ${errorMessage}`;
       apiTestResult.className = 'api-test-result error';
     }
