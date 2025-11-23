@@ -1,19 +1,24 @@
 /**
  * EntityScholar Service Worker (Manifest V3)
  * Handles message passing, auto-scan, and entity extraction
+ * Uses TextRazor API for entity analysis
  */
+
+// Import crypto utilities for secure API key handling
+importScripts('scripts/crypto-utils.js');
 
 // Configuration
 let autoScanEnabled = false;
 let activeTabId = null;
 const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
 const SCAN_DELAY = 500; // 500ms after page load
+const TEXTRAZOR_API_ENDPOINT = 'https://api.textrazor.com/';
 
 // Initialize settings from storage
-chrome.storage.sync.get(['autoScanEnabled', 'apiKey'], (result) => {
+chrome.storage.sync.get(['autoScanEnabled', 'apiKeySet'], (result) => {
   autoScanEnabled = result.autoScanEnabled || false;
-  if (result.apiKey) {
-    console.log('API key loaded');
+  if (result.apiKeySet) {
+    console.log('TextRazor API key is configured');
   }
 });
 
