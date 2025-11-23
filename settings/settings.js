@@ -133,6 +133,7 @@ async function saveSettings() {
 
 /**
  * Test API connection
+ * Uses service worker to avoid CORS issues
  */
 async function testApiConnection() {
   try {
@@ -154,55 +155,29 @@ async function testApiConnection() {
       }
     }
 
-    // Test with TextRazor API
-    const formData = new URLSearchParams();
-    formData.append('text', 'TextRazor API connection test. This is a sample text to verify the API is working correctly.');
-    formData.append('extractors', 'entities');
-
-    const response = await fetch('https://api.textrazor.com/', {
-      method: 'POST',
-      headers: {
-        'X-TextRazor-Key': apiKey,
-        'Content-Type': 'application/x-www-form-urlencoded',
-        'Accept-Encoding': 'gzip'
+    // Send message to service worker to test the API
+    // This avoids CORS issues that occur when calling from extension pages
+    chrome.runtime.sendMessage(
+      {
+        action: 'testApiConnection',
+        apiKey: apiKey
       },
-      body: formData.toString()
-    });
+      (response) => {
+        if (chrome.runtime.lastError) {
+          apiTestResult.textContent = `✗ Connection failed: ${chrome.runtime.lastError.message}`;
+          apiTestResult.className = 'api-test-result error';
+          return;
+        }
 
-    if (response.ok) {
-      const data = await response.json();
-      if (data.ok) {
-        const entityCount = data.response?.entities?.length || 0;
-        apiTestResult.textContent = `✓ API connection successful! Found ${entityCount} test entities.`;
-        apiTestResult.className = 'api-test-result success';
-      } else {
-        apiTestResult.textContent = `✗ API test failed: ${data.error || 'Unknown error'}`;
-        apiTestResult.className = 'api-test-result error';
-      }
-    } else {
-      let errorMessage = 'Unknown error';
-
-      // Provide specific error messages based on HTTP status codes
-      if (response.status === 401) {
-        errorMessage = 'Invalid API key or quota exceeded. Please check your TextRazor API key.';
-      } else if (response.status === 400) {
-        errorMessage = 'Invalid request format. Please contact support.';
-      } else if (response.status === 413) {
-        errorMessage = 'Request too large. Text exceeds 200kb limit.';
-      } else if (response.status === 500) {
-        errorMessage = 'TextRazor server error. Please try again later.';
-      } else {
-        try {
-          const errorData = await response.json();
-          errorMessage = errorData.error || `HTTP ${response.status}: ${response.statusText}`;
-        } catch (e) {
-          errorMessage = `HTTP ${response.status}: ${response.statusText}`;
+        if (response.success) {
+          apiTestResult.textContent = `✓ ${response.message}`;
+          apiTestResult.className = 'api-test-result success';
+        } else {
+          apiTestResult.textContent = `✗ API test failed: ${response.error}`;
+          apiTestResult.className = 'api-test-result error';
         }
       }
-
-      apiTestResult.textContent = `✗ API test failed: ${errorMessage}`;
-      apiTestResult.className = 'api-test-result error';
-    }
+    );
 
   } catch (error) {
     apiTestResult.textContent = `✗ Connection failed: ${error.message}`;

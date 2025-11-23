@@ -48,6 +48,11 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     searchEduSites(request.entity, sendResponse);
     return true;
   }
+
+  if (request.action === "testApiConnection") {
+    testApiConnection(request.apiKey, sendResponse);
+    return true;
+  }
 });
 
 /**
@@ -449,6 +454,90 @@ async function searchEduSites(entity, sendResponse) {
 
   } catch (error) {
     sendResponse({ success: false, error: error.message });
+  }
+}
+
+/**
+ * Test API connection (called from settings page to avoid CORS issues)
+ */
+async function testApiConnection(apiKey, sendResponse) {
+  try {
+    // If no API key provided, try to get from storage
+    if (!apiKey) {
+      apiKey = await getDecryptedApiKey();
+      if (!apiKey) {
+        sendResponse({
+          success: false,
+          error: 'No API key provided'
+        });
+        return;
+      }
+    }
+
+    // Test with TextRazor API
+    const formData = new URLSearchParams();
+    formData.append('text', 'TextRazor API connection test. This is a sample text to verify the API is working correctly.');
+    formData.append('extractors', 'entities');
+
+    const response = await fetch(TEXTRAZOR_API_ENDPOINT, {
+      method: 'POST',
+      headers: {
+        'X-TextRazor-Key': apiKey,
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'Accept-Encoding': 'gzip'
+      },
+      body: formData.toString()
+    });
+
+    if (!response.ok) {
+      let errorMessage = 'API request failed';
+
+      // Provide specific error messages based on HTTP status codes
+      if (response.status === 401) {
+        errorMessage = 'Invalid API key or quota exceeded. Please check your TextRazor API key.';
+      } else if (response.status === 400) {
+        errorMessage = 'Invalid request format. Please contact support.';
+      } else if (response.status === 413) {
+        errorMessage = 'Request too large. Text exceeds 200kb limit.';
+      } else if (response.status === 500) {
+        errorMessage = 'TextRazor server error. Please try again later.';
+      } else {
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.error || `HTTP ${response.status}: ${response.statusText}`;
+        } catch (e) {
+          errorMessage = `HTTP ${response.status}: ${response.statusText}`;
+        }
+      }
+
+      sendResponse({
+        success: false,
+        error: errorMessage
+      });
+      return;
+    }
+
+    const data = await response.json();
+
+    if (data.ok) {
+      const entityCount = data.response?.entities?.length || 0;
+      sendResponse({
+        success: true,
+        message: `API connection successful! Found ${entityCount} test entities.`,
+        entityCount: entityCount
+      });
+    } else {
+      sendResponse({
+        success: false,
+        error: data.error || 'TextRazor analysis failed'
+      });
+    }
+
+  } catch (error) {
+    sendResponse({
+      success: false,
+      error: error.message
+    });
   }
 }
 
