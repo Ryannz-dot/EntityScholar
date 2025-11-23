@@ -34,6 +34,8 @@ chrome.storage.onChanged.addListener((changes, namespace) => {
  * Message handler for popup and content script communication
  */
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+  console.log('Service worker received message:', request.action);
+
   if (request.action === "scanCurrentTab") {
     handleScanRequest(request.tabId, sendResponse);
     return true; // Keep message channel open for async response
@@ -50,7 +52,14 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   }
 
   if (request.action === "testApiConnection") {
-    testApiConnection(request.apiKey, sendResponse);
+    // Wrap async function to ensure errors are caught
+    testApiConnection(request.apiKey, sendResponse).catch(error => {
+      console.error('testApiConnection error:', error);
+      sendResponse({
+        success: false,
+        error: error.message || 'Unknown error occurred'
+      });
+    });
     return true; // Keep message channel open for async response
   }
 });
@@ -449,23 +458,30 @@ async function searchEduSites(entity, sendResponse) {
  * This function is called from the settings page via message passing
  */
 async function testApiConnection(apiKey, sendResponse) {
+  console.log('testApiConnection called, apiKey provided:', !!apiKey);
+
   try {
     // If no API key provided, try to get from encrypted storage
     if (!apiKey) {
+      console.log('No API key provided, retrieving from storage...');
       apiKey = await getDecryptedApiKey();
       if (!apiKey) {
+        console.log('No API key found in storage');
         sendResponse({
           success: false,
           error: 'No API key provided or found in storage'
         });
         return;
       }
+      console.log('API key retrieved from storage');
     }
 
     // Prepare test request to TextRazor API
     const formData = new URLSearchParams();
     formData.append('text', 'TextRazor API connection test. This is a sample text to verify the API is working correctly.');
     formData.append('extractors', 'entities');
+
+    console.log('Making request to TextRazor API:', TEXTRAZOR_API_ENDPOINT);
 
     const response = await fetch(TEXTRAZOR_API_ENDPOINT, {
       method: 'POST',
@@ -475,6 +491,8 @@ async function testApiConnection(apiKey, sendResponse) {
       },
       body: formData.toString()
     });
+
+    console.log('TextRazor API response status:', response.status);
 
     if (response.ok) {
       const data = await response.json();
@@ -506,6 +524,7 @@ async function testApiConnection(apiKey, sendResponse) {
     }
 
   } catch (error) {
+    console.error('testApiConnection error:', error);
     sendResponse({
       success: false,
       error: `Connection failed: ${error.message}`
