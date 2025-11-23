@@ -11,7 +11,7 @@
     "notifications"
   ],
   "host_permissions": [
-    "https://language.googleapis.com/*",
+    "https://api.textrazor.com/*",
     "https://*.edu/*"
   ],
   "background": {
