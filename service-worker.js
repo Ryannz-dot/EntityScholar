@@ -255,59 +255,120 @@ function extractPageText() {
 }
 
 /**
- * Analyze entities using Google Cloud NLP API
+ * Analyze entities using TextRazor API
  */
 async function analyzeEntities(text) {
   try {
-    const settings = await chrome.storage.sync.get(['apiKey']);
+    // Get decrypted API key
+    const apiKey = await getDecryptedApiKey();
 
-    if (!settings.apiKey) {
-      throw new Error('Google Cloud API key not configured. Please add it in settings.');
+    if (!apiKey) {
+      throw new Error('TextRazor API key not configured. Please add it in settings.');
     }
 
-    const response = await fetch(
-      `https://language.googleapis.com/v1/documents:analyzeEntities?key=${settings.apiKey}`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          document: {
-            type: 'PLAIN_TEXT',
-            content: text
-          },
-          encodingType: 'UTF8'
-        })
-      }
-    );
+    // Prepare form data for TextRazor API
+    const formData = new URLSearchParams();
+    formData.append('text', text);
+    formData.append('extractors', 'entities');
+    formData.append('entities.allowOverlap', 'false');
+
+    const response = await fetch(TEXTRAZOR_API_ENDPOINT, {
+      method: 'POST',
+      headers: {
+        'X-TextRazor-Key': apiKey,
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'Accept-Encoding': 'gzip'
+      },
+      body: formData.toString()
+    });
 
     if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.error?.message || 'API request failed');
+      let errorMessage = 'API request failed';
+      try {
+        const errorData = await response.json();
+        errorMessage = errorData.error || errorMessage;
+      } catch (e) {
+        errorMessage = `HTTP ${response.status}: ${response.statusText}`;
+      }
+      throw new Error(errorMessage);
     }
 
     const data = await response.json();
 
-    // Process and rank entities
-    const entities = (data.entities || [])
-      .filter(entity => entity.salience > 0.01) // Filter low salience
-      .sort((a, b) => b.salience - a.salience)  // Sort by salience
-      .slice(0, 5)                              // Top 5
+    if (!data.ok) {
+      throw new Error(data.error || 'TextRazor analysis failed');
+    }
+
+    // Process and rank entities from TextRazor response
+    const entities = (data.response?.entities || [])
+      .filter(entity => {
+        // Filter entities with sufficient relevance or confidence
+        const relevance = entity.relevanceScore || 0;
+        const confidence = entity.confidenceScore || 0;
+        return relevance > 0.01 || confidence > 0.5;
+      })
+      .sort((a, b) => {
+        // Sort by relevance score (primary) and confidence (secondary)
+        const relevanceDiff = (b.relevanceScore || 0) - (a.relevanceScore || 0);
+        if (Math.abs(relevanceDiff) > 0.01) return relevanceDiff;
+        return (b.confidenceScore || 0) - (a.confidenceScore || 0);
+      })
+      .slice(0, 5) // Top 5 entities
       .map(entity => ({
-        name: entity.name,
-        type: entity.type,
-        salience: entity.salience,
-        metadata: entity.metadata || {},
-        mentions: entity.mentions?.length || 0
+        name: entity.matchedText || entity.entityId || 'Unknown',
+        type: mapTextRazorType(entity.type?.[0] || entity.freebaseTypes?.[0]),
+        salience: entity.relevanceScore || entity.confidenceScore || 0,
+        confidence: entity.confidenceScore || 0,
+        relevance: entity.relevanceScore || 0,
+        entityId: entity.entityId,
+        wikidataId: entity.wikidataId,
+        freebaseId: entity.freebaseId,
+        wikiLink: entity.wikiLink,
+        metadata: {
+          types: entity.type || [],
+          freebaseTypes: entity.freebaseTypes || [],
+          matchingTokens: entity.matchingTokens?.length || 0
+        },
+        mentions: entity.matchingTokens?.length || 1
       }));
 
     return entities;
 
   } catch (error) {
-    console.error('Entity analysis failed:', error);
+    console.error('TextRazor entity analysis failed:', error);
     throw error;
   }
+}
+
+/**
+ * Map TextRazor entity types to simplified display types
+ */
+function mapTextRazorType(type) {
+  if (!type) return 'OTHER';
+
+  const typeMap = {
+    'Person': 'PERSON',
+    'Place': 'LOCATION',
+    'Location': 'LOCATION',
+    'City': 'LOCATION',
+    'Country': 'LOCATION',
+    'Organization': 'ORGANIZATION',
+    'Company': 'ORGANIZATION',
+    'Event': 'EVENT',
+    'Product': 'CONSUMER_GOOD',
+    'Work': 'WORK_OF_ART',
+    'CreativeWork': 'WORK_OF_ART'
+  };
+
+  // Check for exact match
+  if (typeMap[type]) return typeMap[type];
+
+  // Check for partial match
+  for (const [key, value] of Object.entries(typeMap)) {
+    if (type.includes(key)) return value;
+  }
+
+  return 'OTHER';
 }
 
 /**
