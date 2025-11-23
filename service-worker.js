@@ -48,6 +48,11 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     searchEduSites(request.entity, sendResponse);
     return true;
   }
+
+  if (request.action === "testApiConnection") {
+    testApiConnection(request.apiKey, sendResponse);
+    return true; // Keep message channel open for async response
+  }
 });
 
 /**
@@ -436,6 +441,75 @@ async function searchEduSites(entity, sendResponse) {
 
   } catch (error) {
     sendResponse({ success: false, error: error.message });
+  }
+}
+
+/**
+ * Test API connection with TextRazor
+ * This function is called from the settings page via message passing
+ */
+async function testApiConnection(apiKey, sendResponse) {
+  try {
+    // If no API key provided, try to get from encrypted storage
+    if (!apiKey) {
+      apiKey = await getDecryptedApiKey();
+      if (!apiKey) {
+        sendResponse({
+          success: false,
+          error: 'No API key provided or found in storage'
+        });
+        return;
+      }
+    }
+
+    // Prepare test request to TextRazor API
+    const formData = new URLSearchParams();
+    formData.append('text', 'TextRazor API connection test. This is a sample text to verify the API is working correctly.');
+    formData.append('extractors', 'entities');
+
+    const response = await fetch(TEXTRAZOR_API_ENDPOINT, {
+      method: 'POST',
+      headers: {
+        'X-TextRazor-Key': apiKey,
+        'Content-Type': 'application/x-www-form-urlencoded'
+      },
+      body: formData.toString()
+    });
+
+    if (response.ok) {
+      const data = await response.json();
+      if (data.ok) {
+        const entityCount = data.response?.entities?.length || 0;
+        sendResponse({
+          success: true,
+          message: `API connection successful! Found ${entityCount} test entities.`,
+          entityCount: entityCount
+        });
+      } else {
+        sendResponse({
+          success: false,
+          error: data.error || 'Unknown error from TextRazor API'
+        });
+      }
+    } else {
+      let errorMessage = 'Unknown error';
+      try {
+        const errorData = await response.json();
+        errorMessage = errorData.error || errorMessage;
+      } catch (e) {
+        errorMessage = `HTTP ${response.status}: ${response.statusText}`;
+      }
+      sendResponse({
+        success: false,
+        error: errorMessage
+      });
+    }
+
+  } catch (error) {
+    sendResponse({
+      success: false,
+      error: `Connection failed: ${error.message}`
+    });
   }
 }
 

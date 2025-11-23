@@ -12,7 +12,8 @@
   ],
   "host_permissions": [
     "https://language.googleapis.com/*",
-    "https://*.edu/*"
+    "https://*.edu/*",
+    "https://api.textrazor.com/*"
   ],
   "background": {
     "service_worker": "service-worker.js"

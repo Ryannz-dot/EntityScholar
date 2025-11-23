@@ -133,6 +133,8 @@ async function saveSettings() {
 
 /**
  * Test API connection
+ * Sends a message to the service worker to test the API
+ * (avoids CORS issues by using the service worker)
  */
 async function testApiConnection() {
   try {
@@ -141,52 +143,25 @@ async function testApiConnection() {
     apiTestResult.textContent = 'Testing connection...';
     apiTestResult.className = 'api-test-result';
 
-    // Get API key - either from input or from encrypted storage
+    // Get API key - either from input or null (service worker will use stored key)
     let apiKey = apiKeyInput.value.trim();
 
     if (!apiKey || apiKey === '••••••••••••••••••••••••••••') {
-      // Try to get from encrypted storage
-      apiKey = await getDecryptedApiKey();
-      if (!apiKey) {
-        apiTestResult.textContent = 'Please enter an API key first';
-        apiTestResult.className = 'api-test-result error';
-        return;
-      }
+      // Don't pass the key, service worker will use the stored one
+      apiKey = null;
     }
 
-    // Test with TextRazor API
-    const formData = new URLSearchParams();
-    formData.append('text', 'TextRazor API connection test. This is a sample text to verify the API is working correctly.');
-    formData.append('extractors', 'entities');
-
-    const response = await fetch('https://api.textrazor.com/', {
-      method: 'POST',
-      headers: {
-        'X-TextRazor-Key': apiKey,
-        'Content-Type': 'application/x-www-form-urlencoded'
-      },
-      body: formData.toString()
+    // Send message to service worker to test the API
+    const response = await chrome.runtime.sendMessage({
+      action: 'testApiConnection',
+      apiKey: apiKey
     });
 
-    if (response.ok) {
-      const data = await response.json();
-      if (data.ok) {
-        const entityCount = data.response?.entities?.length || 0;
-        apiTestResult.textContent = `✓ API connection successful! Found ${entityCount} test entities.`;
-        apiTestResult.className = 'api-test-result success';
-      } else {
-        apiTestResult.textContent = `✗ API test failed: ${data.error || 'Unknown error'}`;
-        apiTestResult.className = 'api-test-result error';
-      }
+    if (response.success) {
+      apiTestResult.textContent = `✓ ${response.message}`;
+      apiTestResult.className = 'api-test-result success';
     } else {
-      let errorMessage = 'Unknown error';
-      try {
-        const errorData = await response.json();
-        errorMessage = errorData.error || errorMessage;
-      } catch (e) {
-        errorMessage = `HTTP ${response.status}: ${response.statusText}`;
-      }
-      apiTestResult.textContent = `✗ API test failed: ${errorMessage}`;
+      apiTestResult.textContent = `✗ API test failed: ${response.error}`;
       apiTestResult.className = 'api-test-result error';
     }
 
